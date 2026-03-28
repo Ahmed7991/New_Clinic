@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16
+    container_name: clinic-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: clinic
+      POSTGRES_PASSWORD: clinic123
+      POSTGRES_DB: clinic_queue
+    volumes:
+      - clinic-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinic -d clinic_queue"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    container_name: clinic-api
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: "Host=db;Database=clinic_queue;Username=clinic;Password=clinic123"
+      WhatsApp__PhoneNumberId: "PLACEHOLDER"
+      WhatsApp__AccessToken: "PLACEHOLDER"
+      WhatsApp__VerifyToken: "PLACEHOLDER"
+      OpenRouter__ApiKey: "PLACEHOLDER"
+      OpenRouter__Model: "google/gemini-2.0-flash-001"
+      Jwt__Key: "ClinicQueueSuperSecretKey2026!!X"
+
+  frontend:
+    build: ./frontend
+    container_name: clinic-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  clinic-pgdata:

@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة العيادة</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1a6b5a">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f4f3; color: #1a1a2e; }
+
+        /* ── Login Screen ───────────────────────────────────── */
+        #login-screen {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh;
+        }
+        .login-card {
+            background: #fff; border-radius: 12px; padding: 40px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.1); width: 360px; text-align: center;
+        }
+        .login-card h1 { margin-bottom: 8px; font-size: 1.5rem; color: #1a6b5a; }
+        .login-card p { margin-bottom: 24px; color: #666; font-size: 0.9rem; }
+        .login-card input {
+            width: 100%; padding: 12px; margin-bottom: 12px;
+            border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;
+            direction: ltr; text-align: left;
+        }
+        .login-card button {
+            width: 100%; padding: 12px; background: #1a6b5a; color: #fff;
+            border: none; border-radius: 8px; font-size: 1rem; cursor: pointer;
+        }
+        .login-card button:hover { background: #145a4a; }
+        .login-error { color: #e94560; margin-top: 12px; font-size: 0.9rem; display: none; }
+
+        /* ── Dashboard ──────────────────────────────────────── */
+        #dashboard { display: none; }
+        .top-bar {
+            background: #1a6b5a; color: #fff; padding: 12px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .top-bar h1 { font-size: 1.2rem; }
+        .top-bar-actions { display: flex; gap: 12px; align-items: center; }
+        .top-bar .user-badge {
+            background: rgba(255,255,255,0.15); padding: 4px 12px;
+            border-radius: 16px; font-size: 0.85rem;
+        }
+        .btn-logout {
+            background: #e94560; color: #fff; border: none;
+            padding: 6px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;
+        }
+        .btn-logout:hover { background: #c23152; }
+
+        /* ── Tabs ───────────────────────────────────────────── */
+        .tabs {
+            display: flex; gap: 0; background: #fff;
+            border-bottom: 2px solid #e0e0e0; padding: 0 24px;
+        }
+        .tab-btn {
+            padding: 12px 24px; border: none; background: transparent;
+            cursor: pointer; font-size: 0.95rem; color: #666;
+            border-bottom: 3px solid transparent; margin-bottom: -2px;
+        }
+        .tab-btn.active { color: #0f3460; border-bottom-color: #1a6b5a; font-weight: 600; }
+        .tab-content { display: none; padding: 24px; }
+        .tab-content.active { display: block; }
+
+        /* ── Queue Tab ──────────────────────────────────────── */
+        .queue-table {
+            width: 100%; border-collapse: collapse; background: #fff;
+            border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .queue-table th, .queue-table td {
+            padding: 12px 16px; text-align: right; border-bottom: 1px solid #f0f0f0;
+        }
+        .queue-table th { background: #f7f8fc; color: #555; font-weight: 600; }
+        .queue-table tr:hover { background: #f7f8fc; }
+        .status-badge {
+            padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;
+            font-weight: 600; display: inline-block;
+        }
+        .status-Pending { background: #fff3cd; color: #856404; }
+        .status-Confirmed { background: #d4edda; color: #155724; }
+        .status-UpNext { background: #cce5ff; color: #004085; }
+        .status-InRoom { background: #d1ecf1; color: #0c5460; }
+        .status-Completed { background: #e2e3e5; color: #383d41; }
+        .status-DidNotAttend { background: #f8d7da; color: #721c24; }
+        .action-btn {
+            padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px;
+            background: #fff; cursor: pointer; font-size: 0.8rem; margin: 0 2px;
+        }
+        .action-btn:hover { background: #f0f2f5; }
+        .arrow-btn {
+            padding: 2px 6px; border: 1px solid #ddd; border-radius: 4px;
+            background: #fff; cursor: pointer; font-size: 0.85rem; margin: 0 1px;
+        }
+        .arrow-btn:hover { background: #edf7f5; }
+
+        /* ── Walk-in Form ───────────────────────────────────── */
+        .walkin-form {
+            background: #fff; padding: 20px; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px;
+            display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+        }
+        .walkin-form label { font-size: 0.85rem; color: #555; display: block; margin-bottom: 4px; }
+        .walkin-form input {
+            padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;
+            font-size: 0.9rem; width: 200px;
+        }
+        .walkin-form button {
+            padding: 8px 20px; background: #1a6b5a; color: #fff;
+            border: none; border-radius: 6px; cursor: pointer;
+        }
+
+        /* ── Settings Tab ───────────────────────────────────── */
+        .settings-card {
+            background: #fff; padding: 24px; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); max-width: 500px;
+        }
+        .settings-card h2 { margin-bottom: 20px; font-size: 1.1rem; color: #1a6b5a; }
+        .field-group { margin-bottom: 16px; }
+        .field-group label {
+            display: block; margin-bottom: 4px; font-size: 0.85rem;
+            color: #555; font-weight: 600;
+        }
+        .field-group input, .field-group select {
+            width: 100%; padding: 10px 12px; border: 1px solid #ddd;
+            border-radius: 8px; font-size: 0.95rem; direction: ltr; text-align: left;
+        }
+        .settings-card button {
+            padding: 10px 28px; background: #1a6b5a; color: #fff;
+            border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer;
+            margin-top: 8px;
+        }
+        .settings-card button:hover { background: #145a4a; }
+        .settings-msg { margin-top: 12px; font-size: 0.9rem; }
+        .settings-msg.ok { color: #155724; }
+        .settings-msg.err { color: #e94560; }
+
+        /* ── Checkbox grid for weekly off days ──────────────── */
+        .day-checkboxes { display: flex; gap: 10px; flex-wrap: wrap; }
+        .day-checkboxes label {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 0.85rem; font-weight: normal; color: #333;
+        }
+
+        /* ── Calendar Tab ──────────────────────────────────── */
+        .calendar-card {
+            background: #fff; padding: 24px; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); max-width: 700px;
+        }
+        .calendar-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .calendar-nav h2 { font-size: 1.1rem; color: #1a6b5a; }
+        .calendar-nav button {
+            padding: 6px 16px; background: #1a6b5a; color: #fff;
+            border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+        }
+        .calendar-nav button:hover { background: #145a4a; }
+        .calendar-grid {
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+        }
+        .calendar-grid .day-header {
+            text-align: center; font-size: 0.8rem; font-weight: 600;
+            color: #555; padding: 8px 0;
+        }
+        .calendar-grid .day-cell {
+            text-align: center; padding: 10px 4px; border-radius: 8px;
+            cursor: pointer; font-size: 0.9rem; min-height: 48px;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; border: 1px solid #eee;
+        }
+        .calendar-grid .day-cell:hover { background: #f0f2f5; }
+        .calendar-grid .day-cell.empty { border: none; cursor: default; }
+        .calendar-grid .day-cell.empty:hover { background: transparent; }
+        .calendar-grid .day-cell.blocked {
+            background: #f8d7da; color: #721c24; font-weight: 600;
+        }
+        .calendar-grid .day-cell.today {
+            border: 2px solid #1a6b5a;
+        }
+        .calendar-grid .day-cell .day-note {
+            font-size: 0.65rem; color: #999; margin-top: 2px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            max-width: 80px;
+        }
+
+        /* ── Doctor Dashboard Tab ──────────────────────────── */
+        #doctor-tab.active {
+            background: #000; min-height: calc(100vh - 110px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .doctor-view {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; width: 100%; max-width: 600px; gap: 48px;
+        }
+        .doctor-section { text-align: center; width: 100%; }
+        .doctor-section h2 {
+            font-size: 1rem; color: #888; margin-bottom: 16px;
+            font-weight: 600; letter-spacing: 1px;
+        }
+        .doctor-section .patient-name {
+            font-size: 2.4rem; color: #fff; font-weight: 700; margin-bottom: 8px;
+        }
+        .doctor-section .patient-phone {
+            font-size: 1rem; color: #aaa; direction: ltr; margin-bottom: 16px;
+        }
+        .doctor-section .timer {
+            font-size: 3.5rem; font-weight: 700; color: #1a6b5a;
+            font-variant-numeric: tabular-nums; direction: ltr;
+        }
+        .doctor-section .empty-msg {
+            font-size: 1.2rem; color: #555;
+        }
+        .doctor-notes-area {
+            width: 100%; max-width: 400px; margin: 12px auto 0; display: flex;
+            flex-direction: column; align-items: center; gap: 8px;
+        }
+        .doctor-notes-area textarea {
+            width: 100%; height: 60px; background: #1a1a1a; color: #eee;
+            border: 1px solid #333; border-radius: 8px; padding: 8px;
+            font-size: 0.9rem; resize: vertical;
+        }
+        .doctor-notes-area textarea::placeholder { color: #666; }
+        .doctor-notes-area button {
+            padding: 6px 20px; background: #1a6b5a; color: #fff;
+            border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+        }
+        .doctor-notes-area button:hover { background: #145a4a; }
+        .doctor-complete-btn {
+            margin-top: 16px; padding: 14px 48px; background: #1a6b5a; color: #fff;
+            border: none; border-radius: 10px; cursor: pointer;
+            font-size: 1.2rem; font-weight: 700; letter-spacing: 1px;
+        }
+        .doctor-complete-btn:hover { background: #145a4a; }
+        .doctor-divider {
+            width: 80%; height: 1px; background: #333; margin: 0 auto;
+        }
+
+        /* ── Stat Cards ──────────────────────────────────── */
+        .stat-cards {
+            display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .stat-card {
+            flex: 1; min-width: 140px; background: #fff; border-radius: 10px;
+            padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            text-align: center; border-top: 4px solid #1a6b5a;
+        }
+        .stat-card .stat-value {
+            font-size: 2rem; font-weight: 700; color: #1a1a2e; margin-bottom: 4px;
+        }
+        .stat-card .stat-label { font-size: 0.85rem; color: #666; }
+        .stat-card.yellow { border-top-color: #f0ad4e; }
+        .stat-card.green  { border-top-color: #28a745; }
+
+        /* ── Users Tab ───────────────────────────────────── */
+        .users-section { max-width: 700px; }
+        .users-section h2 { font-size: 1.1rem; color: #1a6b5a; margin-bottom: 16px; }
+        .users-table {
+            width: 100%; border-collapse: collapse; background: #fff;
+            border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 24px;
+        }
+        .users-table th, .users-table td {
+            padding: 10px 16px; text-align: right; border-bottom: 1px solid #f0f0f0;
+        }
+        .users-table th { background: #f7f8fc; color: #555; font-weight: 600; }
+        .users-table tr:hover { background: #f7f8fc; }
+        .users-table .btn-del {
+            background: #e94560; color: #fff; border: none; padding: 4px 12px;
+            border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+        }
+        .users-table .btn-del:hover { background: #c23152; }
+        .users-table .btn-pw {
+            background: #1a6b5a; color: #fff; border: none; padding: 4px 12px;
+            border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+        }
+        .users-table .btn-pw:hover { background: #145a4a; }
+        .add-user-form {
+            background: #fff; padding: 20px; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+        }
+        .add-user-form label { font-size: 0.85rem; color: #555; display: block; margin-bottom: 4px; }
+        .add-user-form input, .add-user-form select {
+            padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;
+            font-size: 0.9rem; width: 180px;
+        }
+        .add-user-form button {
+            padding: 8px 20px; background: #1a6b5a; color: #fff;
+            border: none; border-radius: 6px; cursor: pointer;
+        }
+        .add-user-form button:hover { background: #145a4a; }
+
+        /* ── Patient Modal ───────────────────────────────── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-card {
+            background: #fff; border-radius: 12px; padding: 28px; width: 90%;
+            max-width: 700px; max-height: 85vh; overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2); position: relative;
+        }
+        .modal-card h2 { font-size: 1.2rem; color: #1a6b5a; margin-bottom: 4px; }
+        .modal-card .modal-sub { font-size: 0.9rem; color: #666; margin-bottom: 16px; direction: ltr; }
+        .modal-close {
+            position: absolute; top: 12px; left: 12px; background: none;
+            border: none; font-size: 1.4rem; cursor: pointer; color: #999;
+        }
+        .modal-close:hover { color: #333; }
+        .modal-stats {
+            display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;
+        }
+        .modal-stat {
+            background: #f7f8fc; border-radius: 8px; padding: 10px 16px; text-align: center;
+        }
+        .modal-stat .val { font-size: 1.2rem; font-weight: 700; color: #1a6b5a; }
+        .modal-stat .lbl { font-size: 0.75rem; color: #666; }
+        .modal-history {
+            width: 100%; border-collapse: collapse; font-size: 0.85rem;
+            margin-bottom: 16px;
+        }
+        .modal-history th, .modal-history td {
+            padding: 8px 12px; text-align: right; border-bottom: 1px solid #f0f0f0;
+        }
+        .modal-history th { background: #f7f8fc; color: #555; font-weight: 600; }
+        .modal-notes-section { margin-top: 12px; }
+        .modal-notes-section label { font-size: 0.85rem; color: #555; font-weight: 600; display: block; margin-bottom: 4px; }
+        .modal-notes-section textarea {
+            width: 100%; height: 70px; border: 1px solid #ddd; border-radius: 8px;
+            padding: 8px; font-size: 0.9rem; resize: vertical;
+        }
+        .modal-notes-section button {
+            margin-top: 8px; padding: 6px 20px; background: #1a6b5a; color: #fff;
+            border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+        }
+        .modal-notes-section button:hover { background: #145a4a; }
+        .patient-link { color: #1a6b5a; cursor: pointer; text-decoration: underline; }
+        .patient-link:hover { color: #145a4a; }
+
+        /* ── Summary Tab ─────────────────────────────────── */
+        .summary-section { max-width: 900px; }
+        .summary-section h2 { font-size: 1.1rem; color: #1a6b5a; margin-bottom: 16px; }
+        .summary-date-picker {
+            margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+        }
+        .summary-date-picker input {
+            padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px;
+            font-size: 0.95rem; direction: ltr;
+        }
+        .summary-chart-container {
+            background: #fff; border-radius: 8px; padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px;
+            max-width: 600px;
+        }
+        .summary-chart-container canvas { max-height: 250px; }
+        .stat-card.red { border-top-color: #e94560; }
+        .stat-card.gray { border-top-color: #999; }
+
+        /* ── Change Password Modal ───────────────────────── */
+        .btn-chpw {
+            background: rgba(255,255,255,0.15); color: #fff; border: none;
+            padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;
+        }
+        .btn-chpw:hover { background: rgba(255,255,255,0.25); }
+        .pw-modal .modal-card { max-width: 400px; }
+        .pw-modal .pw-field { margin-bottom: 12px; }
+        .pw-modal .pw-field label {
+            display: block; font-size: 0.85rem; color: #555;
+            font-weight: 600; margin-bottom: 4px;
+        }
+        .pw-modal .pw-field input {
+            width: 100%; padding: 10px 12px; border: 1px solid #ddd;
+            border-radius: 8px; font-size: 0.95rem; direction: ltr; text-align: left;
+        }
+        .pw-modal button.pw-submit {
+            width: 100%; padding: 10px; background: #1a6b5a; color: #fff;
+            border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer;
+        }
+        .pw-modal button.pw-submit:hover { background: #145a4a; }
+        .pw-modal .pw-msg { margin-top: 10px; font-size: 0.9rem; text-align: center; }
+        .pw-modal .pw-msg.ok { color: #155724; }
+        .pw-modal .pw-msg.err { color: #e94560; }
+
+        /* ── Patient Search Autocomplete ─────────────────── */
+        .patient-search {
+            position: relative; margin-bottom: 16px; max-width: 400px;
+        }
+        .patient-search input {
+            width: 100%; padding: 10px 14px; border: 1px solid #ddd;
+            border-radius: 8px; font-size: 0.9rem; background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .patient-search input:focus { border-color: #1a6b5a; outline: none; }
+        .ac-dropdown {
+            display: none; position: absolute; top: 100%; right: 0; left: 0;
+            background: #fff; border: 1px solid #e0e0e0; border-top: none;
+            border-radius: 0 0 8px 8px; box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            z-index: 500; max-height: 260px; overflow-y: auto;
+        }
+        .ac-dropdown.open { display: block; }
+        .ac-item {
+            padding: 10px 14px; cursor: pointer; display: flex;
+            justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        .ac-item:last-child { border-bottom: none; }
+        .ac-item:hover { background: #edf7f5; }
+        .ac-item .ac-name { font-weight: 600; color: #1a1a2e; }
+        .ac-item .ac-phone { font-size: 0.8rem; color: #888; direction: ltr; }
+
+        /* Print button */
+        .print-btn {
+            margin: 12px 0; padding: 8px 24px;
+            background: #1a6b5a; color: #fff; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 0.95rem;
+        }
+        .print-btn:hover { background: #14544a; }
+
+        /* Print view hidden on screen */
+        #print-view { display: none; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #print-view, #print-view * { visibility: visible; }
+            #print-view {
+                display: block; position: absolute; top: 0; right: 0; left: 0;
+                direction: rtl; font-family: 'Segoe UI', Tahoma, sans-serif;
+                padding: 20px;
+            }
+            #print-view h1 { text-align: center; margin-bottom: 4px; font-size: 1.4rem; }
+            #print-view p { text-align: center; margin-bottom: 16px; color: #555; }
+            #print-view table {
+                width: 100%; border-collapse: collapse; font-size: 0.9rem;
+            }
+            #print-view th, #print-view td {
+                border: 1px solid #333; padding: 6px 10px; text-align: right;
+            }
+            #print-view th { background: #eee; font-weight: 700; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<!-- LOGIN SCREEN                                                               -->
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<div id="login-screen">
+    <div class="login-card">
+        <h1>نظام إدارة العيادة</h1>
+        <p>تسجيل الدخول للوحة التحكم</p>
+        <input id="login-username" type="text" placeholder="اسم المستخدم" autocomplete="username">
+        <input id="login-password" type="password" placeholder="كلمة المرور" autocomplete="current-password">
+        <button id="login-btn" onclick="doLogin()">تسجيل الدخول</button>
+        <div id="login-error" class="login-error"></div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<!-- DASHBOARD                                                                  -->
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<div id="dashboard">
+    <!-- Top bar -->
+    <div class="top-bar">
+        <h1>لوحة تحكم السكرتارية</h1>
+        <div class="top-bar-actions">
+            <span class="user-badge" id="user-badge"></span>
+            <button class="btn-chpw" onclick="openChangePassword()">تغيير كلمة المرور</button>
+            <button class="btn-logout" onclick="doLogout()">تسجيل الخروج</button>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="queue-tab">قائمة الانتظار</button>
+        <button class="tab-btn" data-tab="doctor-tab">لوحة الطبيب</button>
+        <button class="tab-btn" data-tab="calendar-tab">التقويم</button>
+        <button class="tab-btn" data-tab="settings-tab">الإعدادات</button>
+        <button class="tab-btn" data-tab="summary-tab">ملخص اليوم</button>
+        <button class="tab-btn" data-tab="records-tab" id="records-tab-btn">سجلات المرضى</button>
+        <button class="tab-btn" data-tab="audit-tab" id="audit-tab-btn" style="display:none">سجل الأحداث</button>
+        <button class="tab-btn" data-tab="users-tab" id="users-tab-btn" style="display:none">المستخدمون</button>
+    </div>
+
+    <!-- Queue Tab -->
+    <div id="queue-tab" class="tab-content active">
+        <div class="walkin-form">
+            <div style="position:relative">
+                <label>الاسم الكامل بالعربية</label>
+                <input id="walkin-name" type="text" placeholder="أحمد محمد علي" oninput="walkinNameSearch()" autocomplete="off">
+                <div class="ac-dropdown" id="walkin-ac-dropdown"></div>
+            </div>
+            <div>
+                <label>رقم الهاتف</label>
+                <input id="walkin-phone" type="text" placeholder="9647701234567" dir="ltr">
+            </div>
+            <div>
+                <label>تاريخ الميلاد (اختياري)</label>
+                <input id="walkin-dob" type="date" dir="ltr">
+            </div>
+            <div>
+                <label>الجنس</label>
+                <select id="walkin-gender">
+                    <option value="Unknown">اختر</option>
+                    <option value="Male">ذكر</option>
+                    <option value="Female">أنثى</option>
+                </select>
+            </div>
+            <button onclick="addWalkIn()">إضافة حضور مباشر</button>
+        </div>
+
+        <div class="patient-search">
+            <input id="patient-search-input" type="text" placeholder="بحث عن مريض (اسم، هاتف، أو رقم)..." oninput="searchPatients()" autocomplete="off">
+            <div class="ac-dropdown" id="ac-dropdown"></div>
+        </div>
+
+        <div class="stat-cards">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-label">إجمالي المواعيد</div>
+            </div>
+            <div class="stat-card yellow">
+                <div class="stat-value" id="stat-waiting">0</div>
+                <div class="stat-label">في الانتظار</div>
+            </div>
+            <div class="stat-card green">
+                <div class="stat-value" id="stat-completed">0</div>
+                <div class="stat-label">مكتمل</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-inroom">0</div>
+                <div class="stat-label">في الغرفة</div>
+            </div>
+        </div>
+
+        <table class="queue-table">
+            <thead>
+                <tr>
+                    <th style="width:36px"></th>
+                    <th>#</th>
+                    <th>الاسم</th>
+                    <th>الهاتف</th>
+                    <th>الوقت المتوقع</th>
+                    <th>الحالة</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody id="queue-body"></tbody>
+        </table>
+        <button class="print-btn" onclick="printQueue()">طباعة القائمة</button>
+    </div>
+
+    <!-- Doctor Dashboard Tab -->
+    <div id="doctor-tab" class="tab-content">
+        <div class="doctor-view">
+            <div class="doctor-section" id="doctor-inroom">
+                <h2>في الغرفة الآن</h2>
+                <div id="doctor-inroom-content">
+                    <div class="empty-msg">لا يوجد مريض حالياً</div>
+                </div>
+            </div>
+            <div class="doctor-divider"></div>
+            <div class="doctor-section" id="doctor-upnext">
+                <h2>التالي</h2>
+                <div id="doctor-upnext-content">
+                    <div class="empty-msg">لا يوجد مريض تالي</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Tab -->
+    <div id="calendar-tab" class="tab-content">
+        <div class="calendar-card">
+            <div class="calendar-nav">
+                <button onclick="changeMonth(-1)">الشهر السابق &laquo;</button>
+                <h2 id="calendar-title"></h2>
+                <button onclick="changeMonth(1)">&raquo; الشهر التالي</button>
+            </div>
+            <div class="calendar-grid" id="calendar-grid"></div>
+        </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="settings-tab" class="tab-content">
+        <div class="settings-card">
+            <h2>إعدادات العيادة</h2>
+
+            <div class="field-group">
+                <label>مدة الاستشارة (بالدقائق)</label>
+                <input id="s-avg-minutes" type="number" min="5" max="120">
+            </div>
+            <div class="field-group">
+                <label>وقت البداية الافتراضي</label>
+                <input id="s-start-time" type="time">
+            </div>
+            <div class="field-group">
+                <label>وقت النهاية الافتراضي</label>
+                <input id="s-end-time" type="time">
+            </div>
+            <div class="field-group">
+                <label>أيام الإجازة الأسبوعية</label>
+                <div class="day-checkboxes" id="s-off-days">
+                    <label><input type="checkbox" value="0"> الأحد</label>
+                    <label><input type="checkbox" value="1"> الإثنين</label>
+                    <label><input type="checkbox" value="2"> الثلاثاء</label>
+                    <label><input type="checkbox" value="3"> الأربعاء</label>
+                    <label><input type="checkbox" value="4"> الخميس</label>
+                    <label><input type="checkbox" value="5"> الجمعة</label>
+                    <label><input type="checkbox" value="6"> السبت</label>
+                </div>
+            </div>
+
+            <button onclick="saveSettings()">حفظ الإعدادات</button>
+            <div id="settings-msg" class="settings-msg"></div>
+        </div>
+
+        <div class="settings-card" style="margin-top:20px">
+            <h2>النسخ الاحتياطي</h2>
+            <button onclick="downloadBackup()" style="background:#1a6b5a;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:0.95rem;margin-top:8px">تنزيل نسخة احتياطية</button>
+            <div id="backup-msg" class="settings-msg"></div>
+
+            <div id="restore-section" style="display:none;margin-top:20px;padding-top:16px;border-top:1px solid #eee">
+                <h3 style="color:#e94560;margin-bottom:8px">استعادة نسخة احتياطية</h3>
+                <p style="font-size:0.85rem;color:#888;margin-bottom:8px">تحذير: سيتم استبدال جميع البيانات الحالية.</p>
+                <input type="file" id="restore-file" accept=".sql" style="margin-bottom:8px">
+                <br>
+                <button onclick="restoreBackup()" style="background:#e94560;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:0.95rem">استعادة</button>
+                <div id="restore-msg" class="settings-msg"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Tab (Admin only) -->
+    <div id="users-tab" class="tab-content">
+        <div class="users-section">
+            <h2>إدارة المستخدمين</h2>
+            <div class="add-user-form">
+                <div>
+                    <label>اسم المستخدم</label>
+                    <input id="new-user-name" type="text" placeholder="username" dir="ltr">
+                </div>
+                <div>
+                    <label>كلمة المرور</label>
+                    <input id="new-user-pass" type="password" placeholder="password" dir="ltr">
+                </div>
+                <div>
+                    <label>الدور</label>
+                    <select id="new-user-role">
+                        <option value="0">سكرتارية</option>
+                        <option value="1">طبيب</option>
+                        <option value="2">مدير</option>
+                    </select>
+                </div>
+                <button onclick="createUser()">إضافة مستخدم</button>
+            </div>
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم المستخدم</th>
+                        <th>الدور</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="users-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Summary Tab -->
+    <div id="summary-tab" class="tab-content">
+        <div class="summary-section">
+            <h2>ملخص اليوم</h2>
+            <div class="summary-date-picker">
+                <label>التاريخ:</label>
+                <input id="summary-date" type="date">
+                <button onclick="loadSummary()" style="padding:6px 16px;background:#1a6b5a;color:#fff;border:none;border-radius:6px;cursor:pointer;">عرض</button>
+            </div>
+            <div class="stat-cards" id="summary-stats">
+                <div class="stat-card"><div class="stat-value" id="sum-total">0</div><div class="stat-label">إجمالي المواعيد</div></div>
+                <div class="stat-card green"><div class="stat-value" id="sum-completed">0</div><div class="stat-label">مكتمل</div></div>
+                <div class="stat-card red"><div class="stat-value" id="sum-dna">0</div><div class="stat-label">لم يحضر</div></div>
+                <div class="stat-card gray"><div class="stat-value" id="sum-cancelled">0</div><div class="stat-label">ملغي</div></div>
+            </div>
+            <div class="summary-chart-container">
+                <canvas id="summary-chart"></canvas>
+            </div>
+            <table class="queue-table" id="summary-table">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>الوقت</th>
+                        <th>الحالة</th>
+                        <th>ملاحظات</th>
+                    </tr>
+                </thead>
+                <tbody id="summary-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Audit Log Tab (Admin only) -->
+    <div id="audit-tab" class="tab-content">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <label>التاريخ:</label>
+            <input id="audit-date" type="date" dir="ltr" style="padding:6px 12px;border:1px solid #ddd;border-radius:6px">
+            <button onclick="loadAuditLog()" style="background:#1a6b5a;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer">عرض</button>
+        </div>
+        <table class="users-table">
+            <thead><tr><th>الوقت</th><th>المستخدم</th><th>الحدث</th><th>التفاصيل</th></tr></thead>
+            <tbody id="audit-body"></tbody>
+        </table>
+    </div>
+
+    <!-- Records Tab -->
+    <div id="records-tab" class="tab-content">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+            <input id="records-search" type="text" placeholder="بحث بالاسم أو الهاتف أو الرقم..." oninput="loadRecords(1)" style="padding:8px 14px;border:1px solid #ddd;border-radius:6px;font-size:0.95rem;flex:1;min-width:200px">
+            <button onclick="openPatientEdit(null)" style="background:#1a6b5a;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:0.95rem">+ مريض جديد</button>
+        </div>
+        <table class="users-table" id="records-table">
+            <thead>
+                <tr>
+                    <th>#</th><th>الاسم</th><th>الهاتف</th><th>تاريخ الميلاد</th><th>الجنس</th><th>عدد الزيارات</th><th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody id="records-body"></tbody>
+        </table>
+        <div class="records-paging" id="records-paging" style="display:flex;justify-content:center;align-items:center;gap:16px;margin-top:16px">
+            <button id="records-prev" onclick="loadRecords(recordsPage-1)" style="background:#1a6b5a;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer">السابق</button>
+            <span id="records-page-info"></span>
+            <button id="records-next" onclick="loadRecords(recordsPage+1)" style="background:#1a6b5a;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer">التالي</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- Patient Edit Modal -->
+<div class="modal-overlay" id="patient-edit-modal">
+    <div class="modal-card" style="max-width:420px">
+        <button class="modal-close" onclick="closePatientEdit()">&times;</button>
+        <h2 id="pe-title">تعديل بيانات المريض</h2>
+        <div class="pw-field"><label>الاسم الكامل بالعربية</label><input id="pe-name" type="text"></div>
+        <div class="pw-field"><label>رقم الهاتف</label><input id="pe-phone" type="text" dir="ltr"></div>
+        <div class="pw-field"><label>تاريخ الميلاد</label><input id="pe-dob" type="date" dir="ltr"></div>
+        <div class="pw-field"><label>الجنس</label>
+            <select id="pe-gender" style="padding:8px 12px;border:1px solid #ddd;border-radius:6px;width:100%;font-size:0.9rem">
+                <option value="Unknown">غير محدد</option>
+                <option value="Male">ذكر</option>
+                <option value="Female">أنثى</option>
+            </select>
+        </div>
+        <button class="pw-submit" onclick="savePatientEdit()" style="margin-top:12px">حفظ</button>
+        <div class="pw-msg" id="pe-msg"></div>
+    </div>
+</div>
+
+<!-- Patient Profile Modal -->
+<div class="modal-overlay" id="patient-modal">
+    <div class="modal-card">
+        <button class="modal-close" onclick="closePatientModal()">&times;</button>
+        <h2 id="pm-name"></h2>
+        <div class="modal-sub" id="pm-phone"></div>
+        <div class="modal-stats">
+            <div class="modal-stat"><div class="val" id="pm-id"></div><div class="lbl">رقم المريض</div></div>
+            <div class="modal-stat"><div class="val" id="pm-visits"></div><div class="lbl">إجمالي الزيارات</div></div>
+            <div class="modal-stat"><div class="val" id="pm-since"></div><div class="lbl">أول زيارة</div></div>
+            <div class="modal-stat" id="pm-age-stat" style="display:none"><div class="val" id="pm-age"></div><div class="lbl">العمر</div></div>
+            <div class="modal-stat" id="pm-gender-stat" style="display:none"><div class="val" id="pm-gender"></div><div class="lbl">الجنس</div></div>
+        </div>
+        <table class="modal-history">
+            <thead><tr><th>التاريخ</th><th>الوقت</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
+            <tbody id="pm-history"></tbody>
+        </table>
+        <div class="modal-notes-section" id="pm-notes-section" style="display:none">
+            <label>ملاحظات الزيارة الحالية</label>
+            <textarea id="pm-notes"></textarea>
+            <button onclick="savePatientNotes()">حفظ الملاحظات</button>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay pw-modal" id="pw-modal">
+    <div class="modal-card">
+        <button class="modal-close" onclick="closeChangePassword()">&times;</button>
+        <h2 style="margin-bottom:16px">تغيير كلمة المرور</h2>
+        <div class="pw-field">
+            <label>كلمة المرور الحالية</label>
+            <input id="pw-current" type="password" autocomplete="current-password">
+        </div>
+        <div class="pw-field">
+            <label>كلمة المرور الجديدة</label>
+            <input id="pw-new" type="password" autocomplete="new-password">
+        </div>
+        <div class="pw-field">
+            <label>تأكيد كلمة المرور الجديدة</label>
+            <input id="pw-confirm" type="password" autocomplete="new-password">
+        </div>
+        <button class="pw-submit" onclick="submitChangePassword()">تغيير</button>
+        <div class="pw-msg" id="pw-msg"></div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+const API_BASE = window.location.origin;
+let jwtToken = null;
+let hubConnection = null;
+let currentRole = null;
+const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+const NAME_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/name';
+const ROLE_AR = { Secretary: 'سكرتارية', Doctor: 'طبيب', Admin: 'مدير' };
+
+function applyRoleVisibility(role) {
+    currentRole = role;
+    const isDoctor = role === 'Doctor';
+    const isAdmin = role === 'Admin';
+
+    // Tab buttons visibility
+    document.querySelector('[data-tab="queue-tab"]').style.display = isDoctor ? 'none' : '';
+    document.querySelector('[data-tab="calendar-tab"]').style.display = isDoctor ? 'none' : '';
+    document.querySelector('[data-tab="settings-tab"]').style.display = isDoctor ? 'none' : '';
+    document.querySelector('[data-tab="summary-tab"]').style.display = '';
+    document.getElementById('records-tab-btn').style.display = isDoctor ? 'none' : '';
+    document.getElementById('audit-tab-btn').style.display = isAdmin ? '' : 'none';
+    document.getElementById('users-tab-btn').style.display = isAdmin ? '' : 'none';
+    document.getElementById('restore-section').style.display = isAdmin ? '' : 'none';
+
+    // For Doctor: activate doctor tab; for others: activate queue tab
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    if (isDoctor) {
+        document.querySelector('[data-tab="doctor-tab"]').classList.add('active');
+        document.getElementById('doctor-tab').classList.add('active');
+    } else {
+        document.querySelector('[data-tab="queue-tab"]').classList.add('active');
+        document.getElementById('queue-tab').classList.add('active');
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUTH HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+function authHeaders() {
+    return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwtToken };
+}
+
+async function apiFetch(path, options = {}) {
+    options.headers = { ...authHeaders(), ...(options.headers || {}) };
+    const res = await fetch(API_BASE + path, options);
+    if (res.status === 401) { doLogout(); throw new Error('Unauthorized'); }
+    return res;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOGIN / LOGOUT
+// ═══════════════════════════════════════════════════════════════════════════════
+async function doLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'none';
+
+    try {
+        const res = await fetch(API_BASE + '/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            errEl.textContent = data.message || 'فشل تسجيل الدخول';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        const data = await res.json();
+        jwtToken = data.token;
+        localStorage.setItem('clinicToken', jwtToken);
+        localStorage.setItem('clinicTokenExpiry', Date.now() + 8 * 60 * 60 * 1000);
+
+        // Decode role from JWT payload
+        const payload = JSON.parse(atob(jwtToken.split('.')[1]));
+        const role = payload[ROLE_CLAIM] || 'Unknown';
+        document.getElementById('user-badge').textContent = username + ' (' + (ROLE_AR[role] || role) + ')';
+
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        applyRoleVisibility(role);
+
+        loadQueue();
+        loadSettings();
+        loadCalendar();
+        loadDoctorView();
+        loadSummary();
+        if (role === 'Admin') loadUsers();
+        connectSignalR();
+    } catch (e) {
+        errEl.textContent = 'خطأ في الاتصال';
+        errEl.style.display = 'block';
+    }
+}
+
+function doLogout() {
+    jwtToken = null;
+    localStorage.removeItem('clinicToken');
+    localStorage.removeItem('clinicTokenExpiry');
+    if (doctorTimerInterval) { clearInterval(doctorTimerInterval); doctorTimerInterval = null; }
+    if (hubConnection) { hubConnection.stop(); hubConnection = null; }
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('login-password').value = '';
+    document.getElementById('login-error').style.display = 'none';
+}
+
+// Allow Enter key to submit login
+document.getElementById('login-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+});
+
+// ── Auto-login from localStorage ─────────────────────────────────────────────
+(function restoreSession() {
+    const saved = localStorage.getItem('clinicToken');
+    const expiry = parseInt(localStorage.getItem('clinicTokenExpiry'), 10);
+    if (saved && expiry && Date.now() < expiry) {
+        jwtToken = saved;
+        const payload = JSON.parse(atob(jwtToken.split('.')[1]));
+        const name = payload[NAME_CLAIM] || '';
+        const role = payload[ROLE_CLAIM] || '';
+        document.getElementById('user-badge').textContent = name + (role ? ' (' + (ROLE_AR[role] || role) + ')' : '');
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        applyRoleVisibility(role);
+        loadQueue();
+        loadSettings();
+        loadCalendar();
+        loadDoctorView();
+        loadSummary();
+        if (role === 'Admin') loadUsers();
+        connectSignalR();
+    }
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+        if (btn.dataset.tab === 'records-tab') loadRecords(1);
+        if (btn.dataset.tab === 'audit-tab') { document.getElementById('audit-date').value = new Date().toISOString().substring(0, 10); loadAuditLog(); }
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// QUEUE
+// ═══════════════════════════════════════════════════════════════════════════════
+const STATUS_AR = {
+    Pending: 'بانتظار', Confirmed: 'مؤكد', UpNext: 'التالي',
+    InRoom: 'في الغرفة', Completed: 'مكتمل', DidNotAttend: 'لم يحضر', Cancelled: 'ملغي'
+};
+
+const NEXT_STATUS = {
+    Pending: ['Confirmed', 'UpNext', 'Cancelled'],
+    Confirmed: ['UpNext', 'Cancelled'],
+    UpNext: ['InRoom', 'Cancelled'],
+    InRoom: ['Completed']
+};
+
+async function loadQueue() {
+    try {
+        const res = await apiFetch('/api/queue/today');
+        if (!res.ok) return;
+        const queue = await res.json();
+        renderQueue(queue);
+    } catch (e) { /* handled by apiFetch */ }
+}
+
+let currentQueue = [];
+
+function renderQueue(queue) {
+    currentQueue = queue;
+    // Update stat cards
+    document.getElementById('stat-total').textContent = queue.length;
+    document.getElementById('stat-waiting').textContent = queue.filter(q => q.status === 'Pending' || q.status === 'Confirmed' || q.status === 'UpNext').length;
+    document.getElementById('stat-completed').textContent = queue.filter(q => q.status === 'Completed').length;
+    document.getElementById('stat-inroom').textContent = queue.filter(q => q.status === 'InRoom').length;
+
+    const DRAG_STATUSES = ['Pending', 'Confirmed', 'UpNext'];
+    const tbody = document.getElementById('queue-body');
+    tbody.innerHTML = queue.map((q, idx) => {
+        const canDrag = DRAG_STATUSES.includes(q.status);
+        const actions = (NEXT_STATUS[q.status] || []).map(s =>
+            `<button class="action-btn" onclick="updateStatus(${q.appointmentId}, '${s}')">${STATUS_AR[s] || s}</button>`
+        ).join('');
+        const arrows = canDrag ? `<button class="arrow-btn" onclick="moveRow(${idx},-1)" title="لأعلى">↑</button><button class="arrow-btn" onclick="moveRow(${idx},1)" title="لأسفل">↓</button>` : '';
+        return `<tr data-id="${q.appointmentId}" ${canDrag ? 'draggable="true"' : ''}>
+            <td class="drag-handle" style="cursor:${canDrag ? 'grab' : 'default'};text-align:center;color:#aaa;font-size:1.1rem">${canDrag ? '☰' : ''}</td>
+            <td>${q.queuePosition}</td>
+            <td><span class="patient-link" onclick="openPatientModal(${q.patientId}, ${q.appointmentId})">${q.patientName}</span></td>
+            <td dir="ltr">${q.phone}</td>
+            <td dir="ltr">${q.estimatedStart} - ${q.estimatedEnd}</td>
+            <td><span class="status-badge status-${q.status}">${STATUS_AR[q.status] || q.status}</span></td>
+            <td>${arrows} ${actions}</td>
+        </tr>`;
+    }).join('');
+
+    // Attach drag events
+    tbody.querySelectorAll('tr[draggable="true"]').forEach(row => {
+        row.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', row.dataset.id);
+            row.style.opacity = '0.4';
+        });
+        row.addEventListener('dragend', () => { row.style.opacity = '1'; });
+    });
+    tbody.querySelectorAll('tr').forEach(row => {
+        row.addEventListener('dragover', e => {
+            e.preventDefault();
+            const tr = e.target.closest('tr');
+            if (tr) tr.style.borderTop = '2px solid #1a6b5a';
+        });
+        row.addEventListener('dragleave', e => {
+            const tr = e.target.closest('tr');
+            if (tr && !tr.contains(e.relatedTarget)) tr.style.borderTop = '';
+        });
+        row.addEventListener('drop', e => {
+            e.preventDefault();
+            const tr = e.target.closest('tr');
+            if (tr) tr.style.borderTop = '';
+            const draggedId = parseInt(e.dataTransfer.getData('text/plain'));
+            const targetId = parseInt(tr ? tr.dataset.id : row.dataset.id);
+            if (draggedId && targetId && draggedId !== targetId) reorderQueue(draggedId, targetId);
+        });
+    });
+}
+
+function reorderQueue(draggedId, targetId) {
+    const DRAG_STATUSES = ['Pending', 'Confirmed', 'UpNext'];
+    const ids = currentQueue.filter(q => DRAG_STATUSES.includes(q.status)).map(q => q.appointmentId);
+    const fromIdx = ids.indexOf(draggedId);
+    const toIdx = ids.indexOf(targetId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    ids.splice(fromIdx, 1);
+    ids.splice(toIdx, 0, draggedId);
+    sendReorder(ids);
+}
+
+async function moveRow(idx, dir) {
+    const DRAG_STATUSES = ['Pending', 'Confirmed', 'UpNext'];
+    const ids = currentQueue.filter(q => DRAG_STATUSES.includes(q.status)).map(q => q.appointmentId);
+    const item = currentQueue[idx];
+    if (!item || !DRAG_STATUSES.includes(item.status)) return;
+    const posInIds = ids.indexOf(item.appointmentId);
+    const newPos = posInIds + dir;
+    if (newPos < 0 || newPos >= ids.length) return;
+    ids.splice(posInIds, 1);
+    ids.splice(newPos, 0, item.appointmentId);
+    sendReorder(ids);
+}
+
+async function sendReorder(orderedIds) {
+    try {
+        await apiFetch('/api/queue/reorder', { method: 'PUT', body: JSON.stringify({ orderedIds }) });
+        loadQueue();
+    } catch (e) { /* handled */ }
+}
+
+function printQueue() {
+    const STATUS_AR_PRINT = { Pending: 'بالانتظار', Confirmed: 'مؤكد', UpNext: 'التالي', InRoom: 'في الغرفة', Completed: 'مكتمل', Cancelled: 'ملغي', DidNotAttend: 'لم يحضر' };
+    const rows = document.querySelectorAll('#queue-body tr');
+    const tbody = document.getElementById('print-body');
+    tbody.innerHTML = '';
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 5) return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${cells[0].textContent}</td><td>${cells[1].textContent}</td><td>${cells[2].textContent}</td><td>${cells[3].textContent}</td><td>${STATUS_AR_PRINT[cells[4].textContent.trim()] || cells[4].textContent}</td>`;
+        tbody.appendChild(tr);
+    });
+    const today = new Date().toLocaleDateString('ar-IQ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('print-date').textContent = today;
+    window.print();
+}
+
+async function updateStatus(id, newStatus) {
+    try {
+        await apiFetch(`/api/queue/${id}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ newStatus })
+        });
+        loadQueue();
+    } catch (e) { /* handled */ }
+}
+
+async function addWalkIn() {
+    const name = document.getElementById('walkin-name').value.trim();
+    const phone = document.getElementById('walkin-phone').value.trim();
+    if (!name || !phone) return;
+
+    const dob = document.getElementById('walkin-dob').value || null;
+    const gender = document.getElementById('walkin-gender').value;
+    const body = { fullNameAr: name, phoneNumber: phone };
+    if (dob) body.dateOfBirth = dob;
+    if (gender && gender !== 'Unknown') body.gender = gender;
+
+    try {
+        const res = await apiFetch('/api/queue/walkin', {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+        if (res.ok) {
+            document.getElementById('walkin-name').value = '';
+            document.getElementById('walkin-phone').value = '';
+            document.getElementById('walkin-dob').value = '';
+            document.getElementById('walkin-gender').value = 'Unknown';
+            loadQueue();
+        }
+    } catch (e) { /* handled */ }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadSettings() {
+    try {
+        const res = await apiFetch('/api/settings');
+        if (!res.ok) return;
+        const s = await res.json();
+
+        document.getElementById('s-avg-minutes').value = s.avgConsultationMinutes;
+        document.getElementById('s-start-time').value = s.defaultStartTime; // "HH:mm:ss" from API
+        document.getElementById('s-end-time').value = s.defaultEndTime;
+
+        // Parse off-days ("5" or "5,6")
+        const offDays = (s.weeklyOffDays || '').split(',').map(d => d.trim());
+        document.querySelectorAll('#s-off-days input[type="checkbox"]').forEach(cb => {
+            cb.checked = offDays.includes(cb.value);
+        });
+    } catch (e) { /* handled */ }
+}
+
+async function saveSettings() {
+    const msgEl = document.getElementById('settings-msg');
+    msgEl.textContent = '';
+
+    const offDays = [];
+    document.querySelectorAll('#s-off-days input[type="checkbox"]:checked').forEach(cb => {
+        offDays.push(cb.value);
+    });
+
+    const body = {
+        avgConsultationMinutes: parseInt(document.getElementById('s-avg-minutes').value) || null,
+        defaultStartTime: document.getElementById('s-start-time').value || null,
+        defaultEndTime: document.getElementById('s-end-time').value || null,
+        weeklyOffDays: offDays.join(',')
+    };
+
+    try {
+        const res = await apiFetch('/api/settings', {
+            method: 'PUT',
+            body: JSON.stringify(body)
+        });
+        if (res.ok) {
+            msgEl.textContent = 'تم حفظ الإعدادات بنجاح';
+            msgEl.className = 'settings-msg ok';
+        } else {
+            msgEl.textContent = 'فشل الحفظ';
+            msgEl.className = 'settings-msg err';
+        }
+    } catch (e) {
+        msgEl.textContent = 'خطأ في الاتصال';
+        msgEl.className = 'settings-msg err';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════════════════════════════
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth() + 1; // 1-based
+let calBlockedDays = {}; // { "2026-03-15": "note text", ... }
+
+const AR_MONTHS = [
+    '', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+];
+const AR_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+function changeMonth(delta) {
+    calMonth += delta;
+    if (calMonth > 12) { calMonth = 1; calYear++; }
+    if (calMonth < 1) { calMonth = 12; calYear--; }
+    loadCalendar();
+}
+
+async function loadCalendar() {
+    document.getElementById('calendar-title').textContent = AR_MONTHS[calMonth] + ' ' + calYear;
+    try {
+        const res = await apiFetch(`/api/calendar/${calYear}/${calMonth}`);
+        if (!res.ok) { renderCalendar([]); return; }
+        const days = await res.json();
+        calBlockedDays = {};
+        days.forEach(d => {
+            const key = d.date.substring(0, 10); // "YYYY-MM-DD"
+            calBlockedDays[key] = d.note || '';
+        });
+    } catch (e) {
+        calBlockedDays = {};
+    }
+    renderCalendar();
+}
+
+function renderCalendar() {
+    const grid = document.getElementById('calendar-grid');
+    const todayStr = new Date().toISOString().substring(0, 10);
+
+    // Day-of-week headers (Saturday first for Arabic locale)
+    let html = AR_DAYS.map(d => `<div class="day-header">${d}</div>`).join('');
+
+    // First day of month: getDay() returns 0=Sunday
+    const firstDay = new Date(calYear, calMonth - 1, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+
+    // Empty cells before first day
+    for (let i = 0; i < firstDay; i++) {
+        html += '<div class="day-cell empty"></div>';
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${calYear}-${String(calMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const isBlocked = dateStr in calBlockedDays;
+        const isToday = dateStr === todayStr;
+        const note = calBlockedDays[dateStr] || '';
+        const classes = ['day-cell'];
+        if (isBlocked) classes.push('blocked');
+        if (isToday) classes.push('today');
+
+        html += `<div class="${classes.join(' ')}" onclick="toggleBlock('${dateStr}')">
+            <span>${d}</span>
+            ${isBlocked && note ? `<span class="day-note">${note}</span>` : ''}
+        </div>`;
+    }
+
+    grid.innerHTML = html;
+}
+
+async function toggleBlock(dateStr) {
+    if (dateStr in calBlockedDays) {
+        // Unblock
+        try {
+            await apiFetch('/api/calendar/unblock', {
+                method: 'POST',
+                body: JSON.stringify({ date: dateStr })
+            });
+            delete calBlockedDays[dateStr];
+            renderCalendar();
+        } catch (e) { /* handled */ }
+    } else {
+        // Block — prompt for optional note
+        const note = prompt('ملاحظة (اختياري):') || '';
+        try {
+            await apiFetch('/api/calendar/block', {
+                method: 'POST',
+                body: JSON.stringify({ date: dateStr, note })
+            });
+            calBlockedDays[dateStr] = note;
+            renderCalendar();
+        } catch (e) { /* handled */ }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DOCTOR DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════
+let doctorTimerInterval = null;
+let doctorInRoomSince = null; // Date object for when the current patient entered InRoom
+let doctorCurrentApptId = null; // Appointment ID of the current InRoom patient
+
+async function loadDoctorView() {
+    try {
+        const res = await apiFetch('/api/queue/doctor-view');
+        if (!res.ok) return;
+        const data = await res.json();
+        renderDoctorView(data);
+    } catch (e) { /* handled */ }
+}
+
+function renderDoctorView(data) {
+    const inroomEl = document.getElementById('doctor-inroom-content');
+    const upnextEl = document.getElementById('doctor-upnext-content');
+
+    // Stop any running timer
+    if (doctorTimerInterval) { clearInterval(doctorTimerInterval); doctorTimerInterval = null; }
+    doctorInRoomSince = null;
+    doctorCurrentApptId = null;
+
+    // Current patient (InRoom)
+    if (data.currentPatient) {
+        const p = data.currentPatient;
+        doctorCurrentApptId = p.appointmentId;
+        inroomEl.innerHTML = `
+            <div class="patient-name">${p.patientName}</div>
+            <div class="patient-phone">${p.phone || ''}</div>
+            <div class="doctor-notes-area">
+                <textarea id="doctor-notes" placeholder="ملاحظات الزيارة...">${p.notes || ''}</textarea>
+                <button onclick="saveDoctorNotes()">حفظ الملاحظات</button>
+            </div>
+            <div class="timer" id="doctor-timer">00:00</div>
+            <button class="doctor-complete-btn" onclick="completeCurrent()">مكتمل ✓</button>`;
+
+        // Start counting up from when they entered InRoom
+        if (p.enteredRoomAt) {
+            doctorInRoomSince = new Date(p.enteredRoomAt);
+        } else {
+            doctorInRoomSince = new Date();
+        }
+        updateDoctorTimer();
+        doctorTimerInterval = setInterval(updateDoctorTimer, 1000);
+    } else {
+        inroomEl.innerHTML = '<div class="empty-msg">لا يوجد مريض حالياً</div>';
+    }
+
+    // Up Next patient
+    if (data.upNext) {
+        upnextEl.innerHTML = `<div class="patient-name">${data.upNext.patientName}</div>`;
+    } else {
+        upnextEl.innerHTML = '<div class="empty-msg">لا يوجد مريض تالي</div>';
+    }
+}
+
+function updateDoctorTimer() {
+    if (!doctorInRoomSince) return;
+    const el = document.getElementById('doctor-timer');
+    if (!el) return;
+    const diff = Math.max(0, Math.floor((Date.now() - doctorInRoomSince.getTime()) / 1000));
+    const m = String(Math.floor(diff / 60)).padStart(2, '0');
+    const s = String(diff % 60).padStart(2, '0');
+    el.textContent = m + ':' + s;
+}
+
+async function completeCurrent() {
+    if (!doctorCurrentApptId) return;
+    try {
+        await apiFetch('/api/queue/' + doctorCurrentApptId + '/status', {
+            method: 'PUT',
+            body: JSON.stringify({ newStatus: 'Completed' })
+        });
+        loadDoctorView();
+    } catch (e) { /* handled */ }
+}
+
+async function saveDoctorNotes() {
+    if (!doctorCurrentApptId) return;
+    const notes = document.getElementById('doctor-notes').value;
+    try {
+        await apiFetch('/api/queue/' + doctorCurrentApptId + '/notes', {
+            method: 'PUT',
+            body: JSON.stringify({ notes })
+        });
+    } catch (e) { /* handled */ }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATIENT PROFILE MODAL
+// ═══════════════════════════════════════════════════════════════════════════════
+let currentModalApptId = null;
+
+async function openPatientModal(patientId, appointmentId) {
+    currentModalApptId = appointmentId || null;
+    try {
+        const res = await apiFetch('/api/patients/' + patientId);
+        if (!res.ok) return;
+        const p = await res.json();
+
+        document.getElementById('pm-name').textContent = p.fullNameAr;
+        document.getElementById('pm-phone').textContent = p.phoneNumber;
+        document.getElementById('pm-id').textContent = p.id;
+        document.getElementById('pm-visits').textContent = p.totalVisits;
+        document.getElementById('pm-since').textContent = p.createdAt ? p.createdAt.substring(0, 10) : '-';
+
+        const ageStat = document.getElementById('pm-age-stat');
+        if (p.age != null) {
+            document.getElementById('pm-age').textContent = p.age + ' سنة';
+            ageStat.style.display = '';
+        } else {
+            ageStat.style.display = 'none';
+        }
+
+        const genderStat = document.getElementById('pm-gender-stat');
+        const GENDER_AR = { Male: '♂ ذكر', Female: '♀ أنثى' };
+        if (p.gender && p.gender !== 'Unknown') {
+            document.getElementById('pm-gender').textContent = GENDER_AR[p.gender] || p.gender;
+            genderStat.style.display = '';
+        } else {
+            genderStat.style.display = 'none';
+        }
+
+        const tbody = document.getElementById('pm-history');
+        tbody.innerHTML = p.appointments.map(a => `<tr>
+            <td>${a.date}</td>
+            <td dir="ltr">${a.estimatedTimeRange}</td>
+            <td><span class="status-badge status-${a.status}">${STATUS_AR[a.status] || a.status}</span></td>
+            <td>${a.notes || '-'}</td>
+        </tr>`).join('');
+
+        // Show notes editor for today's appointment
+        const notesSection = document.getElementById('pm-notes-section');
+        if (currentModalApptId) {
+            const todayAppt = p.appointments.find(a => a.id === currentModalApptId);
+            document.getElementById('pm-notes').value = (todayAppt && todayAppt.notes) || '';
+            notesSection.style.display = 'block';
+        } else {
+            notesSection.style.display = 'none';
+        }
+
+        document.getElementById('patient-modal').classList.add('open');
+    } catch (e) { /* handled */ }
+}
+
+function closePatientModal() {
+    document.getElementById('patient-modal').classList.remove('open');
+    currentModalApptId = null;
+}
+
+async function savePatientNotes() {
+    if (!currentModalApptId) return;
+    const notes = document.getElementById('pm-notes').value;
+    try {
+        await apiFetch('/api/queue/' + currentModalApptId + '/notes', {
+            method: 'PUT',
+            body: JSON.stringify({ notes })
+        });
+        loadQueue();
+    } catch (e) { /* handled */ }
+}
+
+// Close modal on overlay click
+document.getElementById('patient-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closePatientModal();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WORKDAY SUMMARY
+// ═══════════════════════════════════════════════════════════════════════════════
+let summaryChart = null;
+
+// Set default date to today
+document.getElementById('summary-date').value = new Date().toISOString().substring(0, 10);
+
+async function loadSummary() {
+    const date = document.getElementById('summary-date').value;
+    if (!date) return;
+    try {
+        const res = await apiFetch('/api/queue/summary?date=' + date);
+        if (!res.ok) return;
+        const s = await res.json();
+        renderSummary(s);
+    } catch (e) { /* handled */ }
+}
+
+function renderSummary(s) {
+    document.getElementById('sum-total').textContent = s.totalBooked;
+    document.getElementById('sum-completed').textContent = s.completed;
+    document.getElementById('sum-dna').textContent = s.didNotAttend;
+    document.getElementById('sum-cancelled').textContent = s.cancelled;
+
+    // Chart
+    if (summaryChart) summaryChart.destroy();
+    const ctx = document.getElementById('summary-chart').getContext('2d');
+    summaryChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['قيد المعالجة', 'مكتمل', 'لم يحضر', 'ملغي'],
+            datasets: [{
+                data: [s.inProgress, s.completed, s.didNotAttend, s.cancelled],
+                backgroundColor: ['#1a6b5a', '#28a745', '#e94560', '#999']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Table
+    const tbody = document.getElementById('summary-body');
+    tbody.innerHTML = (s.appointments || []).map(a => `<tr>
+        <td><span class="patient-link" onclick="openPatientModal(${a.patientId}, ${a.appointmentId})">${a.patientName}</span></td>
+        <td dir="ltr">${a.estimatedTimeRange}</td>
+        <td><span class="status-badge status-${a.status}">${STATUS_AR[a.status] || a.status}</span></td>
+        <td>${a.notes || '-'}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHANGE MY PASSWORD
+// ═══════════════════════════════════════════════════════════════════════════════
+function openChangePassword() {
+    document.getElementById('pw-current').value = '';
+    document.getElementById('pw-new').value = '';
+    document.getElementById('pw-confirm').value = '';
+    document.getElementById('pw-msg').textContent = '';
+    document.getElementById('pw-msg').className = 'pw-msg';
+    document.getElementById('pw-modal').classList.add('open');
+}
+
+function closeChangePassword() {
+    document.getElementById('pw-modal').classList.remove('open');
+}
+
+document.getElementById('pw-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeChangePassword();
+});
+
+async function submitChangePassword() {
+    const msgEl = document.getElementById('pw-msg');
+    const currentPassword = document.getElementById('pw-current').value;
+    const newPassword = document.getElementById('pw-new').value;
+    const confirm = document.getElementById('pw-confirm').value;
+
+    if (!currentPassword || !newPassword) {
+        msgEl.textContent = 'جميع الحقول مطلوبة';
+        msgEl.className = 'pw-msg err';
+        return;
+    }
+    if (newPassword !== confirm) {
+        msgEl.textContent = 'كلمة المرور الجديدة غير متطابقة';
+        msgEl.className = 'pw-msg err';
+        return;
+    }
+
+    try {
+        const res = await apiFetch('/api/auth/me/password', {
+            method: 'PUT',
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+            msgEl.textContent = data.message || 'تم تغيير كلمة المرور بنجاح';
+            msgEl.className = 'pw-msg ok';
+            document.getElementById('pw-current').value = '';
+            document.getElementById('pw-new').value = '';
+            document.getElementById('pw-confirm').value = '';
+        } else {
+            msgEl.textContent = data.message || 'فشل تغيير كلمة المرور';
+            msgEl.className = 'pw-msg err';
+        }
+    } catch (e) {
+        msgEl.textContent = 'خطأ في الاتصال';
+        msgEl.className = 'pw-msg err';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACKUP & RESTORE
+// ═══════════════════════════════════════════════════════════════════════════════
+async function downloadBackup() {
+    const msgEl = document.getElementById('backup-msg');
+    msgEl.textContent = 'جاري التنزيل...';
+    msgEl.className = 'settings-msg';
+    try {
+        const res = await apiFetch('/api/admin/backup');
+        if (!res.ok) { msgEl.textContent = 'فشل التنزيل'; msgEl.className = 'settings-msg err'; return; }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const disp = res.headers.get('content-disposition') || '';
+        const match = disp.match(/filename=([^;]+)/);
+        a.download = match ? match[1] : 'clinic-backup.sql';
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        msgEl.textContent = 'تم التنزيل بنجاح';
+        msgEl.className = 'settings-msg ok';
+    } catch (e) { msgEl.textContent = 'خطأ في الاتصال'; msgEl.className = 'settings-msg err'; }
+}
+
+async function restoreBackup() {
+    const msgEl = document.getElementById('restore-msg');
+    const fileInput = document.getElementById('restore-file');
+    if (!fileInput.files.length) { msgEl.textContent = 'اختر ملف أولاً'; msgEl.className = 'settings-msg err'; return; }
+    if (!confirm('تحذير: سيتم استبدال جميع البيانات الحالية. هل أنت متأكد؟')) return;
+    msgEl.textContent = 'جاري الاستعادة...';
+    msgEl.className = 'settings-msg';
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    try {
+        const res = await fetch(API_BASE + '/api/admin/restore', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + jwtToken },
+            body: formData
+        });
+        if (res.ok) { msgEl.textContent = 'تمت الاستعادة بنجاح'; msgEl.className = 'settings-msg ok'; }
+        else { const t = await res.text(); msgEl.textContent = t || 'فشلت الاستعادة'; msgEl.className = 'settings-msg err'; }
+    } catch (e) { msgEl.textContent = 'خطأ في الاتصال'; msgEl.className = 'settings-msg err'; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadAuditLog() {
+    const date = document.getElementById('audit-date').value || new Date().toISOString().substring(0, 10);
+    try {
+        const res = await apiFetch('/api/audit?date=' + date);
+        if (!res.ok) return;
+        const logs = await res.json();
+        const tbody = document.getElementById('audit-body');
+        tbody.innerHTML = logs.map(l => {
+            const time = new Date(l.timestamp).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            return `<tr><td dir="ltr">${time}</td><td>${l.username}</td><td>${l.action}</td><td>${l.details || ''}</td></tr>`;
+        }).join('');
+        if (logs.length === 0) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;padding:20px">لا توجد أحداث لهذا التاريخ</td></tr>';
+    } catch (e) { /* handled */ }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATIENT RECORDS
+// ═══════════════════════════════════════════════════════════════════════════════
+let recordsPage = 1;
+let recordsTotalPages = 1;
+let editingPatientId = null;
+
+const GENDER_AR_RECORDS = { Male: 'ذكر', Female: 'أنثى', Unknown: 'غير محدد' };
+
+async function loadRecords(page) {
+    if (page < 1) page = 1;
+    recordsPage = page;
+    const q = document.getElementById('records-search').value.trim();
+    const params = new URLSearchParams({ page, pageSize: 20 });
+    if (q) params.set('q', q);
+
+    try {
+        const res = await apiFetch('/api/patients?' + params);
+        if (!res.ok) return;
+        const data = await res.json();
+        recordsTotalPages = Math.max(1, Math.ceil(data.totalCount / data.pageSize));
+
+        const tbody = document.getElementById('records-body');
+        tbody.innerHTML = data.patients.map(p => `<tr>
+            <td>${p.id}</td>
+            <td>${p.fullNameAr}</td>
+            <td dir="ltr">${p.phoneNumber}</td>
+            <td dir="ltr">${p.dateOfBirth || '-'}</td>
+            <td>${GENDER_AR_RECORDS[p.gender] || p.gender}</td>
+            <td>${p.totalVisits}</td>
+            <td>
+                <button class="btn-pw" onclick="openPatientModal(${p.id})">عرض</button>
+                <button class="btn-pw" onclick="openPatientEdit(${p.id})" style="margin-right:6px">تعديل</button>
+            </td>
+        </tr>`).join('');
+
+        document.getElementById('records-page-info').textContent = 'صفحة ' + recordsPage + ' من ' + recordsTotalPages;
+        document.getElementById('records-prev').disabled = recordsPage <= 1;
+        document.getElementById('records-next').disabled = recordsPage >= recordsTotalPages;
+    } catch (e) { /* handled */ }
+}
+
+async function openPatientEdit(patientId) {
+    editingPatientId = patientId;
+    const msgEl = document.getElementById('pe-msg');
+    msgEl.textContent = '';
+    msgEl.className = 'pw-msg';
+
+    if (patientId) {
+        document.getElementById('pe-title').textContent = 'تعديل بيانات المريض';
+        try {
+            const res = await apiFetch('/api/patients/' + patientId);
+            if (!res.ok) return;
+            const p = await res.json();
+            document.getElementById('pe-name').value = p.fullNameAr;
+            document.getElementById('pe-phone').value = p.phoneNumber;
+            document.getElementById('pe-dob').value = p.dateOfBirth || '';
+            document.getElementById('pe-gender').value = (p.gender && p.gender !== 'Unknown') ? p.gender : 'Unknown';
+        } catch (e) { return; }
+    } else {
+        document.getElementById('pe-title').textContent = 'إضافة مريض جديد';
+        document.getElementById('pe-name').value = '';
+        document.getElementById('pe-phone').value = '';
+        document.getElementById('pe-dob').value = '';
+        document.getElementById('pe-gender').value = 'Unknown';
+    }
+    document.getElementById('patient-edit-modal').classList.add('open');
+}
+
+function closePatientEdit() {
+    document.getElementById('patient-edit-modal').classList.remove('open');
+}
+document.getElementById('patient-edit-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closePatientEdit();
+});
+
+async function savePatientEdit() {
+    const name = document.getElementById('pe-name').value.trim();
+    const phone = document.getElementById('pe-phone').value.trim();
+    const dob = document.getElementById('pe-dob').value || null;
+    const gender = document.getElementById('pe-gender').value;
+    const msgEl = document.getElementById('pe-msg');
+
+    if (!name || !phone) {
+        msgEl.textContent = 'الاسم والهاتف مطلوبان';
+        msgEl.className = 'pw-msg err';
+        return;
+    }
+
+    const body = { fullNameAr: name, phoneNumber: phone, dateOfBirth: dob, gender };
+
+    try {
+        let res;
+        if (editingPatientId) {
+            res = await apiFetch('/api/patients/' + editingPatientId, { method: 'PUT', body: JSON.stringify(body) });
+        } else {
+            res = await apiFetch('/api/patients', { method: 'POST', body: JSON.stringify(body) });
+        }
+        if (res.status === 409) {
+            const text = await res.text();
+            msgEl.textContent = text || 'رقم الهاتف مسجل مسبقاً';
+            msgEl.className = 'pw-msg err';
+            return;
+        }
+        if (!res.ok) {
+            msgEl.textContent = 'حدث خطأ';
+            msgEl.className = 'pw-msg err';
+            return;
+        }
+        closePatientEdit();
+        loadRecords(recordsPage);
+    } catch (e) {
+        msgEl.textContent = 'خطأ في الاتصال';
+        msgEl.className = 'pw-msg err';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WALK-IN NAME AUTOCOMPLETE
+// ═══════════════════════════════════════════════════════════════════════════════
+let walkinSearchTimeout = null;
+
+function walkinNameSearch() {
+    const q = document.getElementById('walkin-name').value.trim();
+    const dropdown = document.getElementById('walkin-ac-dropdown');
+    if (q.length < 1) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
+
+    clearTimeout(walkinSearchTimeout);
+    walkinSearchTimeout = setTimeout(async () => {
+        try {
+            const res = await apiFetch('/api/patients/search?q=' + encodeURIComponent(q));
+            if (!res.ok) return;
+            const patients = await res.json();
+            if (patients.length === 0) {
+                dropdown.classList.remove('open'); dropdown.innerHTML = ''; return;
+            }
+            dropdown.innerHTML = patients.map(p =>
+                `<div class="ac-item" onclick="walkinAcSelect(${p.id})">
+                    <span class="ac-name">${p.fullNameAr}</span>
+                    <span class="ac-phone">${p.phoneNumber}</span>
+                </div>`
+            ).join('');
+            dropdown.classList.add('open');
+        } catch (e) { /* handled */ }
+    }, 300);
+}
+
+async function walkinAcSelect(patientId) {
+    document.getElementById('walkin-ac-dropdown').classList.remove('open');
+    try {
+        const res = await apiFetch('/api/patients/' + patientId);
+        if (!res.ok) return;
+        const p = await res.json();
+        document.getElementById('walkin-name').value = p.fullNameAr;
+        document.getElementById('walkin-phone').value = p.phoneNumber;
+        document.getElementById('walkin-dob').value = p.dateOfBirth || '';
+        document.getElementById('walkin-gender').value = (p.gender && p.gender !== 'Unknown') ? p.gender : 'Unknown';
+    } catch (e) { /* handled */ }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATIENT SEARCH
+// ═══════════════════════════════════════════════════════════════════════════════
+let searchTimeout = null;
+
+function searchPatients() {
+    const q = document.getElementById('patient-search-input').value.trim();
+    const dropdown = document.getElementById('ac-dropdown');
+    if (q.length < 1) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
+
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(async () => {
+        try {
+            const res = await apiFetch('/api/patients/search?q=' + encodeURIComponent(q));
+            if (!res.ok) return;
+            const patients = await res.json();
+            if (patients.length === 0) {
+                dropdown.innerHTML = '<div style="padding:10px 14px;color:#999;font-size:0.85rem">لا توجد نتائج</div>';
+                dropdown.classList.add('open');
+                return;
+            }
+            dropdown.innerHTML = patients.map(p =>
+                `<div class="ac-item" onclick="acSelect(${p.id})">
+                    <span class="ac-name">${p.fullNameAr}</span>
+                    <span class="ac-phone">${p.phoneNumber}</span>
+                </div>`
+            ).join('');
+            dropdown.classList.add('open');
+        } catch (e) { /* handled */ }
+    }, 300);
+}
+
+function acSelect(patientId) {
+    document.getElementById('ac-dropdown').classList.remove('open');
+    document.getElementById('patient-search-input').value = '';
+    openPatientModal(patientId);
+}
+
+document.addEventListener('click', e => {
+    const search = document.querySelector('.patient-search');
+    if (search && !search.contains(e.target)) {
+        document.getElementById('ac-dropdown').classList.remove('open');
+    }
+    const walkinName = document.getElementById('walkin-name');
+    if (walkinName && !walkinName.contains(e.target) && !document.getElementById('walkin-ac-dropdown').contains(e.target)) {
+        document.getElementById('walkin-ac-dropdown').classList.remove('open');
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// USERS (Admin only)
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadUsers() {
+    try {
+        const res = await apiFetch('/api/auth/users');
+        if (!res.ok) return;
+        const users = await res.json();
+        renderUsers(users);
+    } catch (e) { /* handled */ }
+}
+
+function renderUsers(users) {
+    const tbody = document.getElementById('users-body');
+    tbody.innerHTML = users.map(u => `<tr>
+        <td>${u.id}</td>
+        <td>${u.username}</td>
+        <td>${ROLE_AR[u.role] || u.role}</td>
+        <td>
+            <button class="btn-pw" onclick="changeUserPassword(${u.id}, '${u.username}')">تغيير كلمة المرور</button>
+            <button class="btn-del" onclick="deleteUser(${u.id}, '${u.username}')">حذف</button>
+        </td>
+    </tr>`).join('');
+}
+
+async function createUser() {
+    const username = document.getElementById('new-user-name').value.trim();
+    const password = document.getElementById('new-user-pass').value;
+    const role = parseInt(document.getElementById('new-user-role').value);
+    if (!username || !password) return;
+
+    try {
+        const res = await apiFetch('/api/auth/users', {
+            method: 'POST',
+            body: JSON.stringify({ username, password, role })
+        });
+        if (res.ok) {
+            document.getElementById('new-user-name').value = '';
+            document.getElementById('new-user-pass').value = '';
+            loadUsers();
+        } else {
+            const data = await res.json().catch(() => ({}));
+            alert(data.message || 'فشل إنشاء المستخدم');
+        }
+    } catch (e) { /* handled */ }
+}
+
+async function deleteUser(id, username) {
+    if (!confirm('هل تريد حذف المستخدم "' + username + '"؟')) return;
+    try {
+        const res = await apiFetch('/api/auth/users/' + id, { method: 'DELETE' });
+        if (res.ok) { loadUsers(); }
+        else {
+            const data = await res.json().catch(() => ({}));
+            alert(data.message || 'فشل الحذف');
+        }
+    } catch (e) { /* handled */ }
+}
+
+async function changeUserPassword(id, username) {
+    const newPassword = prompt('كلمة المرور الجديدة لـ "' + username + '":');
+    if (!newPassword) return;
+    try {
+        const res = await apiFetch('/api/auth/users/' + id + '/password', {
+            method: 'PUT',
+            body: JSON.stringify({ newPassword })
+        });
+        if (res.ok) { alert('تم تغيير كلمة المرور بنجاح'); }
+        else {
+            const data = await res.json().catch(() => ({}));
+            alert(data.message || 'فشل تغيير كلمة المرور');
+        }
+    } catch (e) { /* handled */ }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SIGNALR
+// ═══════════════════════════════════════════════════════════════════════════════
+function connectSignalR() {
+    hubConnection = new signalR.HubConnectionBuilder()
+        .withUrl(API_BASE + '/hubs/queue', {
+            accessTokenFactory: () => jwtToken
+        })
+        .withAutomaticReconnect()
+        .build();
+
+    hubConnection.on('QueueUpdated', queue => renderQueue(queue));
+    hubConnection.on('StatusChanged', () => { loadQueue(); loadDoctorView(); });
+    hubConnection.on('NewBooking', () => loadQueue());
+    hubConnection.on('DoctorViewUpdated', data => renderDoctorView(data));
+
+    hubConnection.start().catch(err => console.error('SignalR error:', err));
+}
+</script>
+<!-- Print View (hidden, shown only during print) -->
+<div id="print-view">
+    <h1 id="print-clinic-name">العيادة</h1>
+    <p id="print-date"></p>
+    <table>
+        <thead>
+            <tr><th>#</th><th>الاسم</th><th>الهاتف</th><th>الوقت المتوقع</th><th>الحالة</th></tr>
+        </thead>
+        <tbody id="print-body"></tbody>
+    </table>
+</div>
+<script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
+</script>
+</body>
+</html>

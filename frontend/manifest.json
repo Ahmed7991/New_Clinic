@@ -1,0 +1,15 @@
+{
+  "name": "نظام إدارة العيادة",
+  "short_name": "العيادة",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f4f3",
+  "theme_color": "#1a6b5a",
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
