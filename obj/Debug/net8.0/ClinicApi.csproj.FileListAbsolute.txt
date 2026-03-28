@@ -1,0 +1,9 @@
+/app/obj/Debug/net8.0/ClinicApi.csproj.AssemblyReference.cache
+/app/obj/Debug/net8.0/rpswa.dswa.cache.json
+/app/obj/Debug/net8.0/ClinicApi.GeneratedMSBuildEditorConfig.editorconfig
+/app/obj/Debug/net8.0/ClinicApi.AssemblyInfoInputs.cache
+/app/obj/Debug/net8.0/ClinicApi.AssemblyInfo.cs
+/app/obj/Debug/net8.0/ClinicApi.csproj.CoreCompileInputs.cache
+/app/obj/Debug/net8.0/ClinicApi.MvcApplicationPartsAssemblyInfo.cs
+/app/obj/Debug/net8.0/ClinicApi.MvcApplicationPartsAssemblyInfo.cache
+/app/obj/Debug/net8.0/ClinicApi.sourcelink.json
