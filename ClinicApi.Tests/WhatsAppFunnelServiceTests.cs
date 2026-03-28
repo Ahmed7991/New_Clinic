@@ -4,6 +4,7 @@ using ClinicApi.Models;
 using ClinicApi.Services;
 using ClinicApi.Tests.Helpers;
 using NSubstitute;
+using Xunit;
 
 namespace ClinicApi.Tests;
 
@@ -20,8 +21,7 @@ public class WhatsAppFunnelServiceTests
         _db = TestDbHelper.CreateContext();
         _booking = Substitute.For<BookingService>();
         _whatsApp = Substitute.For<WhatsAppSender>();
-        _ai = Substitute.For<OpenRouterService>();
-        _sut = new WhatsAppFunnelService(_db, _booking, _whatsApp, _ai);
+        _sut = new WhatsAppFunnelService(_db, _booking, _whatsApp);
     }
 
     [Fact]

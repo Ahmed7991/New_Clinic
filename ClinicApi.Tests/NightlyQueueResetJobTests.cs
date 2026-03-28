@@ -3,6 +3,7 @@ using ClinicApi.Jobs;
 using ClinicApi.Models;
 using ClinicApi.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
+using Xunit;
 
 namespace ClinicApi.Tests;
 

@@ -77,11 +77,19 @@ public class QueueController : ControllerBase
 
         appt.Status = req.NewStatus;
         appt.UpdatedAt = DateTime.UtcNow;
+        appt.Version = Guid.NewGuid();
 
         if (req.NewStatus == AppointmentStatus.InRoom)
             appt.EnteredRoomAt = DateTime.UtcNow;
 
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("The appointment was modified by another user. Please refresh and try again.");
+        }
 
         await _audit.LogAsync("تغيير حالة موعد", $"موعد #{appt.Id} ({appt.Patient.FullNameAr}): {appt.Status}", HttpContext);
 
@@ -120,7 +128,16 @@ public class QueueController : ControllerBase
 
         appt.Notes = req.Notes;
         appt.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+        appt.Version = Guid.NewGuid();
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("The appointment was modified by another user. Please refresh and try again.");
+        }
         return Ok();
     }
 
@@ -177,7 +194,16 @@ public class QueueController : ControllerBase
 
         appt.Status = AppointmentStatus.Cancelled;
         appt.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+        appt.Version = Guid.NewGuid();
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("The appointment was modified by another user. Please refresh and try again.");
+        }
 
         await _hub.BroadcastStatusChange(id, AppointmentStatus.Cancelled.ToString());
 
@@ -213,9 +239,17 @@ public class QueueController : ControllerBase
             appt.EstimatedStart = startTime.AddMinutes(i * settings.AvgConsultationMinutes);
             appt.EstimatedEnd = appt.EstimatedStart.AddMinutes(settings.AvgConsultationMinutes);
             appt.UpdatedAt = DateTime.UtcNow;
+            appt.Version = Guid.NewGuid();
         }
 
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("The queue was modified by another user. Please refresh and try again.");
+        }
 
         await _audit.LogAsync("إعادة ترتيب القائمة", $"عدد المواعيد: {req.OrderedIds.Length}", HttpContext);
 

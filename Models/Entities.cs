@@ -81,6 +81,9 @@ public class Appointment
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    [ConcurrencyCheck]
+    public Guid Version { get; set; } = Guid.NewGuid();
 }
 
 // ─── Calendar Day Overrides ────────────────────────────────────────────────────

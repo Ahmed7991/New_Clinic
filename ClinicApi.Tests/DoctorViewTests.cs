@@ -8,6 +8,7 @@ using ClinicApi.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using NSubstitute;
+using Xunit;
 
 namespace ClinicApi.Tests;
 
@@ -23,7 +24,8 @@ public class DoctorViewTests
             _db,
             Substitute.For<BookingService>(),
             Substitute.For<NotificationService>(),
-            Substitute.For<IHubContext<QueueHub>>()
+            Substitute.For<IHubContext<QueueHub>>(),
+            Substitute.For<AuditService>()
         );
     }
 
