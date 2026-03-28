@@ -43,7 +43,8 @@ public enum AppointmentStatus
     InRoom,       // Currently with doctor
     Completed,    // Done
     Cancelled,    // Cancelled by secretary
-    DidNotAttend  // Nightly job marks leftover Pending/Confirmed
+    DidNotAttend, // Nightly job marks leftover Pending/Confirmed, or manual no-show
+    SteppedOut    // Patient arrived but stepped out temporarily
 }
 
 public class Appointment

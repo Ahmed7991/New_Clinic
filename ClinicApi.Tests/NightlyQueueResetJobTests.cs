@@ -120,12 +120,19 @@ public class NightlyQueueResetJobTests
                 AppointmentDate = yesterday,
                 QueuePosition = 3,
                 Status = AppointmentStatus.UpNext
+            },
+            new Appointment
+            {
+                PatientId = patient.Id,
+                AppointmentDate = yesterday,
+                QueuePosition = 4,
+                Status = AppointmentStatus.SteppedOut
             });
         await db.SaveChangesAsync();
 
         var count = await NightlyQueueResetJob.RunQueueResetAsync(db, tz);
 
-        Assert.Equal(3, count);
+        Assert.Equal(4, count);
         var all = await db.Appointments.ToListAsync();
         Assert.All(all, a => Assert.Equal(AppointmentStatus.DidNotAttend, a.Status));
     }

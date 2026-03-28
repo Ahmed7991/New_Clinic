@@ -5,6 +5,7 @@ using ClinicApi.Services;
 using ClinicApi.Tests.Helpers;
 using NSubstitute;
 using Xunit;
+using Microsoft.Extensions.Configuration;
 
 namespace ClinicApi.Tests;
 
@@ -19,8 +20,9 @@ public class WhatsAppFunnelServiceTests
     public WhatsAppFunnelServiceTests()
     {
         _db = TestDbHelper.CreateContext();
-        _booking = Substitute.For<BookingService>();
-        _whatsApp = Substitute.For<WhatsAppSender>();
+        _booking = Substitute.For<BookingService>(_db);
+        _whatsApp = Substitute.For<WhatsAppSender>(new HttpClient(), Substitute.For<IConfiguration>());
+        _ai = Substitute.For<OpenRouterService>(new HttpClient(), Substitute.For<IConfiguration>());
         _sut = new WhatsAppFunnelService(_db, _booking, _whatsApp);
     }
 
@@ -130,7 +132,7 @@ public class WhatsAppFunnelServiceTests
             WaId = "964333444555",
             Step = ConversationStep.AwaitingPhone,
             CollectedName = "فاطمة",
-            LastMessageAt = DateTime.UtcNow.AddMinutes(-30)
+            LastMessageAt = DateTime.UtcNow.AddMinutes(-29).AddSeconds(-59)
         };
         _db.WhatsAppSessions.Add(session);
         await _db.SaveChangesAsync();

@@ -110,7 +110,8 @@ public class NightlyQueueResetJob : BackgroundService
             .Where(a => a.AppointmentDate < today
                      && (a.Status == AppointmentStatus.Pending
                       || a.Status == AppointmentStatus.Confirmed
-                      || a.Status == AppointmentStatus.UpNext))
+                      || a.Status == AppointmentStatus.UpNext
+                      || a.Status == AppointmentStatus.SteppedOut))
             .ToListAsync();
 
         foreach (var appt in leftovers)

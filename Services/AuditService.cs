@@ -36,6 +36,17 @@ public class AuditService
 
         // Auto-delete entries older than 30 days
         var cutoff = DateTime.UtcNow.AddDays(-30);
-        await _db.AuditLogs.Where(a => a.Timestamp < cutoff).ExecuteDeleteAsync();
+
+        // Use ToList() and RemoveRange for in-memory provider compatibility during tests
+        if (_db.Database.IsInMemory())
+        {
+            var oldLogs = await _db.AuditLogs.Where(a => a.Timestamp < cutoff).ToListAsync();
+            _db.AuditLogs.RemoveRange(oldLogs);
+            await _db.SaveChangesAsync();
+        }
+        else
+        {
+            await _db.AuditLogs.Where(a => a.Timestamp < cutoff).ExecuteDeleteAsync();
+        }
     }
 }

@@ -6,9 +6,11 @@ using ClinicApi.Models;
 using ClinicApi.Services;
 using ClinicApi.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using NSubstitute;
 using Xunit;
+using Microsoft.Extensions.Configuration;
 
 namespace ClinicApi.Tests;
 
@@ -20,13 +22,32 @@ public class DoctorViewTests
     public DoctorViewTests()
     {
         _db = TestDbHelper.CreateContext();
+        var mockContext = new DefaultHttpContext();
         _controller = new QueueController(
             _db,
-            Substitute.For<BookingService>(),
-            Substitute.For<NotificationService>(),
+            Substitute.For<BookingService>(_db),
+            Substitute.For<NotificationService>(_db, Substitute.For<WhatsAppSender>(new HttpClient(), Substitute.For<IConfiguration>())),
             Substitute.For<IHubContext<QueueHub>>(),
-            Substitute.For<AuditService>()
-        );
+            Substitute.For<AuditService>(_db)
+        )
+        {
+            ControllerContext = new ControllerContext { HttpContext = mockContext }
+        };
+
+        // Seed required clinic settings
+        if (!_db.ClinicSettings.Any())
+        {
+            _db.ClinicSettings.Add(new ClinicSettings
+            {
+                Id = 1,
+                ClinicName = "Test",
+                AvgConsultationMinutes = 15,
+                DefaultStartTime = new TimeOnly(8, 30),
+                DefaultEndTime = new TimeOnly(16, 0),
+                WeeklyOffDays = "5"
+            });
+            _db.SaveChanges();
+        }
     }
 
     private Patient SeedPatient(string name, string phone)
@@ -67,8 +88,8 @@ public class DoctorViewTests
         SeedAppointment(p1, 1, AppointmentStatus.InRoom);
         SeedAppointment(p2, 2, AppointmentStatus.UpNext);
 
-        var result = await _controller.GetDoctorView();
-        var dto = result.Value!;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var dto = await _controller.BuildDoctorViewAsync(today);
 
         Assert.NotNull(dto.CurrentPatient);
         Assert.Equal("أحمد", dto.CurrentPatient!.PatientName);
@@ -84,8 +105,8 @@ public class DoctorViewTests
         SeedAppointment(p1, 1, AppointmentStatus.InRoom);
         SeedAppointment(p2, 2, AppointmentStatus.UpNext);
 
-        var result = await _controller.GetDoctorView();
-        var dto = result.Value!;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var dto = await _controller.BuildDoctorViewAsync(today);
 
         Assert.NotNull(dto.UpNext);
         Assert.Equal("سارة", dto.UpNext!.PatientName);
@@ -103,8 +124,8 @@ public class DoctorViewTests
         SeedAppointment(p2, 2, AppointmentStatus.InRoom);
         SeedAppointment(p3, 3, AppointmentStatus.UpNext);
 
-        var result = await _controller.GetDoctorView();
-        var dto = result.Value!;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var dto = await _controller.BuildDoctorViewAsync(today);
 
         Assert.NotNull(dto.CurrentPatient);
         Assert.NotNull(dto.UpNext);
@@ -121,8 +142,8 @@ public class DoctorViewTests
         SeedAppointment(p1, 1, AppointmentStatus.InRoom);
         SeedAppointment(p2, 2, AppointmentStatus.Pending);
 
-        var result = await _controller.GetDoctorView();
-        var dto = result.Value!;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var dto = await _controller.BuildDoctorViewAsync(today);
 
         Assert.NotNull(dto.CurrentPatient);
         Assert.NotNull(dto.UpNext);
@@ -131,10 +152,26 @@ public class DoctorViewTests
     }
 
     [Fact]
+    public async Task DoctorView_SkipsSteppedOutForUpNext()
+    {
+        var p1 = SeedPatient("أحمد", "9641111111");
+        var p2 = SeedPatient("سارة", "9642222222");
+
+        SeedAppointment(p1, 1, AppointmentStatus.InRoom);
+        SeedAppointment(p2, 2, AppointmentStatus.SteppedOut);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var dto = await _controller.BuildDoctorViewAsync(today);
+
+        Assert.NotNull(dto.CurrentPatient);
+        Assert.Null(dto.UpNext); // Because there is no Pending/Confirmed/UpNext to pick up
+    }
+
+    [Fact]
     public async Task DoctorView_ReturnsNullsWhenQueueEmpty()
     {
-        var result = await _controller.GetDoctorView();
-        var dto = result.Value!;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var dto = await _controller.BuildDoctorViewAsync(today);
 
         Assert.Null(dto.CurrentPatient);
         Assert.Null(dto.UpNext);
@@ -149,8 +186,8 @@ public class DoctorViewTests
         SeedAppointment(p1, 1, AppointmentStatus.Cancelled);
         SeedAppointment(p2, 2, AppointmentStatus.Completed);
 
-        var result = await _controller.GetDoctorView();
-        var dto = result.Value!;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var dto = await _controller.BuildDoctorViewAsync(today);
 
         Assert.Null(dto.CurrentPatient);
         Assert.Null(dto.UpNext);
