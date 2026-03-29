@@ -110,16 +110,25 @@ public class NightlyQueueResetJob : BackgroundService
             .Where(a => a.AppointmentDate < today
                      && (a.Status == AppointmentStatus.Pending
                       || a.Status == AppointmentStatus.Confirmed
-                      || a.Status == AppointmentStatus.UpNext))
+                      || a.Status == AppointmentStatus.UpNext
+                      || a.Status == AppointmentStatus.SteppedOut))
             .ToListAsync();
 
         foreach (var appt in leftovers)
         {
             appt.Status = AppointmentStatus.DidNotAttend;
             appt.UpdatedAt = DateTime.UtcNow;
+            appt.Version = Guid.NewGuid();
         }
 
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // If another process modified it concurrently, we can skip and let it be handled later or log.
+        }
         return leftovers.Count;
     }
 }

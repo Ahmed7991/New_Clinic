@@ -64,11 +64,24 @@ public class QueueController : ControllerBase
 
         bool validTransition = req.NewStatus == AppointmentStatus.Cancelled || (appt.Status, req.NewStatus) switch
         {
+            // Standard flow
             (AppointmentStatus.Pending, AppointmentStatus.Confirmed) => true,
             (AppointmentStatus.Pending, AppointmentStatus.UpNext) => true,
             (AppointmentStatus.Confirmed, AppointmentStatus.UpNext) => true,
             (AppointmentStatus.UpNext, AppointmentStatus.InRoom) => true,
             (AppointmentStatus.InRoom, AppointmentStatus.Completed) => true,
+
+            // Manual No-Show
+            (AppointmentStatus.Pending, AppointmentStatus.DidNotAttend) => true,
+            (AppointmentStatus.Confirmed, AppointmentStatus.DidNotAttend) => true,
+            (AppointmentStatus.UpNext, AppointmentStatus.DidNotAttend) => true,
+
+            // Step Out Mechanism
+            (AppointmentStatus.Confirmed, AppointmentStatus.SteppedOut) => true,
+            (AppointmentStatus.UpNext, AppointmentStatus.SteppedOut) => true,
+            (AppointmentStatus.SteppedOut, AppointmentStatus.UpNext) => true,
+            (AppointmentStatus.SteppedOut, AppointmentStatus.InRoom) => true,
+
             _ => false
         };
 
@@ -77,11 +90,19 @@ public class QueueController : ControllerBase
 
         appt.Status = req.NewStatus;
         appt.UpdatedAt = DateTime.UtcNow;
+        appt.Version = Guid.NewGuid();
 
         if (req.NewStatus == AppointmentStatus.InRoom)
             appt.EnteredRoomAt = DateTime.UtcNow;
 
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("The appointment was modified by another user. Please refresh and try again.");
+        }
 
         await _audit.LogAsync("تغيير حالة موعد", $"موعد #{appt.Id} ({appt.Patient.FullNameAr}): {appt.Status}", HttpContext);
 
@@ -120,7 +141,16 @@ public class QueueController : ControllerBase
 
         appt.Notes = req.Notes;
         appt.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+        appt.Version = Guid.NewGuid();
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("The appointment was modified by another user. Please refresh and try again.");
+        }
         return Ok();
     }
 
@@ -153,7 +183,7 @@ public class QueueController : ControllerBase
             didNotAttend = appts.Count(a => a.Status == AppointmentStatus.DidNotAttend),
             inProgress = appts.Count(a => a.Status is AppointmentStatus.Pending
                 or AppointmentStatus.Confirmed or AppointmentStatus.UpNext
-                or AppointmentStatus.InRoom),
+                or AppointmentStatus.InRoom or AppointmentStatus.SteppedOut),
             cancelled = appts.Count(a => a.Status == AppointmentStatus.Cancelled),
             averageConsultationMinutes = avgMinutes,
             appointments = appts.Select(a => new
@@ -177,7 +207,16 @@ public class QueueController : ControllerBase
 
         appt.Status = AppointmentStatus.Cancelled;
         appt.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+        appt.Version = Guid.NewGuid();
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("The appointment was modified by another user. Please refresh and try again.");
+        }
 
         await _hub.BroadcastStatusChange(id, AppointmentStatus.Cancelled.ToString());
 
@@ -206,16 +245,24 @@ public class QueueController : ControllerBase
         {
             var appt = appts.FirstOrDefault(a => a.Id == req.OrderedIds[i]);
             if (appt is null) continue;
-            if (appt.Status is not (AppointmentStatus.Pending or AppointmentStatus.Confirmed or AppointmentStatus.UpNext))
+            if (appt.Status is not (AppointmentStatus.Pending or AppointmentStatus.Confirmed or AppointmentStatus.UpNext or AppointmentStatus.SteppedOut))
                 continue;
 
             appt.QueuePosition = i + 1;
             appt.EstimatedStart = startTime.AddMinutes(i * settings.AvgConsultationMinutes);
             appt.EstimatedEnd = appt.EstimatedStart.AddMinutes(settings.AvgConsultationMinutes);
             appt.UpdatedAt = DateTime.UtcNow;
+            appt.Version = Guid.NewGuid();
         }
 
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("The queue was modified by another user. Please refresh and try again.");
+        }
 
         await _audit.LogAsync("إعادة ترتيب القائمة", $"عدد المواعيد: {req.OrderedIds.Length}", HttpContext);
 
@@ -261,7 +308,7 @@ public class QueueController : ControllerBase
             .ToListAsync();
     }
 
-    private async Task<DoctorViewDto> BuildDoctorViewAsync(DateOnly date)
+    public async Task<DoctorViewDto> BuildDoctorViewAsync(DateOnly date)
     {
         var appts = await _db.Appointments
             .Include(a => a.Patient)
@@ -269,7 +316,8 @@ public class QueueController : ControllerBase
                      && (a.Status == AppointmentStatus.InRoom
                       || a.Status == AppointmentStatus.UpNext
                       || a.Status == AppointmentStatus.Pending
-                      || a.Status == AppointmentStatus.Confirmed))
+                      || a.Status == AppointmentStatus.Confirmed
+                      || a.Status == AppointmentStatus.SteppedOut))
             .OrderBy(a => a.QueuePosition)
             .ToListAsync();
 
